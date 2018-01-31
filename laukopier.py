@@ -32,7 +32,7 @@ def login():
 
 def add_thread(thread):
     """
-    Takes a submissionID and adds it to filename (set in config).
+    Takes a submissionID and adds it to list of completed threads (set in config).
     """
     with load(config.filename) as subreddit_data:
         if thread not in subreddit_data["ThreadID"]:
@@ -51,12 +51,57 @@ def subreddit_finder(url):
             return url[index:testindex]
 
 
+def clear_json():
+    with load(config.filename) as jsondata:
+        print("Are you sure you want to clear all previously worked threads?")
+        print("WARNING: THIS COULD POST TWICE ON THE SAME COMMENT, WHICH BREAKS REDDIT TOS")
+        if input("Please type 'I understand.': ") == "I understand.":
+            jsondata["ThreadID"] = []
+            print("Threads reset.")
+        else:
+            print("Threads not reset.")
+
+
+def main_thread(url):
+    print("This is a main thread.")
+    print(url)
+    print("---")
+
+
+def context_thread(url):
+    print("This is a context thread.")
+    print(url)
+    print("---")
+
+
+def work_thread(submission):
+    # Determines whether thread is a self post or referencing a comment, handles appropriately.
+    url = submission.url
+    if 'context' in url:
+        context_thread(url)
+    else:
+        main_thread(url)
+
+
 def main(reddit_instance):
-    bola = reddit_instance.subreddit("bestoflegalasdvice")
+    bola = reddit_instance.subreddit("bestoflegaladvice")
     for submission in bola.stream.submissions():
-        add_thread(str(submission))
-        print(subreddit_finder(submission.url))
+        threadID = str(submission)
+        subreddit = subreddit_finder(submission.url).lower()
+
+        with open(config.filename, 'r') as f:
+            jsondata = json.load(f)
+            # Checks to see if thread has already been worked. If it has, skips.
+            if threadID in jsondata["ThreadID"]:
+                pass
+            else:
+                add_thread(str(submission))
+                if subreddit == "legaladvice" or subreddit == "bestoflegaladvice":
+                    pass
+                else:
+                    work_thread(submission)
 
 
+clear_json()
 if __name__ == "__main__":
     main(login())
