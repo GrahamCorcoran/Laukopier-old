@@ -54,13 +54,21 @@ def url_splitter(url):
     if "reddit" not in url:
         raise URLError("URL passed into function not from reddit.")
 
-    url_components = url.split("/")
-    print(list(filter(lambda x: x, url_components)))
+    split_url = url.split("/")
+    # Removes underscores
+    removed_underscores = list(filter(lambda x: x != '_', split_url))
+    # Removes empty values
+    url_components = list(filter(None, removed_underscores))
+
+    # Removes last element where it's a query - not useful for parsing data.
+    if '?' in url_components[-1]:
+        url_components.pop()
+    
     subreddit = url_components[url_components.index("r")+1]
     print(subreddit)
     target_submission = url_components[url_components.index("comments")+1]
     print(target_submission)
-    print(url.split("/"))
+    print(url_components)
 
 
 def clear_json():
