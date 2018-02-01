@@ -59,10 +59,15 @@ def url_splitter(url):
     removed_underscores = list(filter(lambda x: x != '_', split_url))
     # Removes empty values
     url_components = list(filter(None, removed_underscores))
-
     # Removes last element where it's a query - not useful for parsing data.
     while '?' in url_components[-1]:
         url_components.pop()
+
+    return url_components
+    """
+    ---
+    Outdated URL Splitter code below
+    ---
     comment_thread = False
     subreddit = url_components[url_components.index("r")+1]
     target_submission = url_components[url_components.index("comments")+1]
@@ -72,7 +77,7 @@ def url_splitter(url):
         comment_thread = True
 
     return subreddit, target_submission, comment_thread
-
+    """
 
 def clear_json():
     with load(config.filename) as jsondata:
@@ -86,12 +91,22 @@ def clear_json():
 
 
 def work_thread(submission, reddit_instance):
-    url = submission.url
-    subreddit, target_submission, comment_thread = url_splitter(url)
-    if not comment_thread and subreddit.lower() != "legaladvice" and subreddit.lower() != "bestoflegaladvice":
-        title = reddit_instance.submission(target_submission).title
-        body = reddit_instance.submission(target_submission).selftext
-        print(title + '\n' + body)
+    url = url_splitter(submission.url)
+
+    # The subreddit name is always immediately following /r/ in a reddit URL.
+    subreddit = url[url.index("r")+1].lower()
+    if subreddit == "legaladvice" or subreddit == "bestoflegaladvice":
+        print("Skipping legaladvice thread -- handled by LocationBot.")
+    else:
+        target_thread = url[url.index("comments")+1]
+        target_thread_obj = reddit_instance.submission(target_thread)
+        title = target_thread_obj.title
+        final_elements = [title.split()[0].lower(),
+                          target_thread]
+        print(final_elements)
+
+        print(subreddit, target_thread)
+        print(url)
 
 
 def main(reddit_instance):
