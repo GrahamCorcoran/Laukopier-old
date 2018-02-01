@@ -18,6 +18,10 @@ class load(object):
             json.dump(self.data, f, indent=4)
 
 
+class URLError(Exception):
+    pass
+
+
 def login():
     """
     Returns a reddit instance using your bot login information in config.py
@@ -39,16 +43,23 @@ def add_thread(thread):
             subreddit_data["ThreadID"].append(thread)
 
 
-def subreddit_finder(url):
+def url_splitter(url):
     """
-    Takes a reddit.com URL and returns the subreddit that URL is from.
+    :param url: Reddit URL
+    :return: Subreddit as string
+             Target post as string
+             Is comment as Boolean
     """
-    for index, char in enumerate(url):
-        if url[index-3:index] == "/r/":
-            testindex = index+1
-            while url[testindex] != '/':
-                testindex += 1
-            return url[index:testindex]
+    print(url)
+    if "reddit" not in url:
+        raise URLError("URL passed into function not from reddit.")
+
+    url_components = url.split("/")
+    subreddit = url_components[url_components.index("r")+1]
+    print(subreddit)
+    target_submission = url_components[url_components.index("comments")+1]
+    print(target_submission)
+    print(url.split("/"))
 
 
 def clear_json():
@@ -87,7 +98,10 @@ def main(reddit_instance):
     bola = reddit_instance.subreddit("bestoflegaladvice")
     for submission in bola.stream.submissions():
         threadID = str(submission)
-        subreddit = subreddit_finder(submission.url).lower()
+        try:
+            subreddit = url_splitter(submission.url).lower()
+        except AttributeError:
+            print("No subreddit found, possible deleted thread.")
 
         with open(config.filename, 'r') as f:
             jsondata = json.load(f)
@@ -102,6 +116,13 @@ def main(reddit_instance):
                     work_thread(submission)
 
 
-clear_json()
-if __name__ == "__main__":
-    main(login())
+#if __name__ == "__main__":
+#    main(login())
+reddit_instance = login()
+bola = reddit_instance.subreddit("bestoflegaladvice")
+for submission in bola.stream.submissions():
+    try:
+        url_splitter(submission.url)
+    except URLError:
+        print("Not a valid URL: skipping.")
+url_splitter("https://np.reddit.com/r/legaladvice/comments/7ub915/caught_babysitter_with_her_bf_reported_her_she/")
