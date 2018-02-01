@@ -48,7 +48,7 @@ def url_splitter(url):
     :param url: Reddit URL
     :return: Subreddit as string
              Target post as string
-             Is comment as Boolean
+             Comment_thread as a boolean: True if comment thread
     """
     print(url)
     if "reddit" not in url:
@@ -61,14 +61,17 @@ def url_splitter(url):
     url_components = list(filter(None, removed_underscores))
 
     # Removes last element where it's a query - not useful for parsing data.
-    if '?' in url_components[-1]:
+    while '?' in url_components[-1]:
         url_components.pop()
-    
+    comment_thread = False
     subreddit = url_components[url_components.index("r")+1]
-    print(subreddit)
     target_submission = url_components[url_components.index("comments")+1]
-    print(target_submission)
-    print(url_components)
+    last_element = url_components[-1].split("_")
+
+    if last_element[0] != target_submission and len(last_element) == 1:
+        comment_thread = True
+
+    return subreddit, target_submission, comment_thread
 
 
 def clear_json():
@@ -82,35 +85,19 @@ def clear_json():
             print("Threads not reset.")
 
 
-def main_thread(url):
-    print("This is a main thread.")
-    print(url)
-    print("---")
-
-
-def context_thread(url):
-    print("This is a context thread.")
-    print(url)
-    print("---")
-
-
-def work_thread(submission):
-    # Determines whether thread is a self post or referencing a comment, handles appropriately.
+def work_thread(submission, reddit_instance):
     url = submission.url
-    if 'context' in url:
-        context_thread(url)
-    else:
-        main_thread(url)
+    subreddit, target_submission, comment_thread = url_splitter(url)
+    if not comment_thread and subreddit.lower() != "legaladvice" and subreddit.lower() != "bestoflegaladvice":
+        title = reddit_instance.submission(target_submission).title
+        body = reddit_instance.submission(target_submission).selftext
+        print(title + '\n' + body)
 
 
 def main(reddit_instance):
     bola = reddit_instance.subreddit("bestoflegaladvice")
     for submission in bola.stream.submissions():
         threadID = str(submission)
-        try:
-            subreddit = url_splitter(submission.url).lower()
-        except AttributeError:
-            print("No subreddit found, possible deleted thread.")
 
         with open(config.filename, 'r') as f:
             jsondata = json.load(f)
@@ -119,19 +106,11 @@ def main(reddit_instance):
                 pass
             else:
                 add_thread(str(submission))
-                if subreddit == "legaladvice" or subreddit == "bestoflegaladvice":
+                try:
+                    work_thread(submission, reddit_instance)
+                except URLError:
                     pass
-                else:
-                    work_thread(submission)
 
-
-#if __name__ == "__main__":
-#    main(login())
-reddit_instance = login()
-bola = reddit_instance.subreddit("bestoflegaladvice")
-for submission in bola.stream.submissions():
-    try:
-        url_splitter(submission.url)
-    except URLError:
-        print("Not a valid URL: skipping.")
-url_splitter("https://np.reddit.com/r/legaladvice/comments/7ub915/caught_babysitter_with_her_bf_reported_her_she/")
+clear_json()
+if __name__ == "__main__":
+    main(login())
