@@ -1,6 +1,7 @@
 import praw
 import config
 import json
+import time
 
 ignored_subreddits = ["legaladvice",
                       "bestoflegaladvice",
@@ -112,6 +113,27 @@ def clear_json():
             print("Threads not reset.")
 
 
+def post(reddit, thread, target_thread):
+    testpost = reddit.submission("7usa17")
+
+    title = target_thread.title
+    body = target_thread.selftext
+    body = body.split("\n\n")
+    newbody = []
+
+    for element in body:
+        newbody.append("\n \n> " + element)
+    body = "".join(newbody)
+    header = "Title: " + title + "\n\n" + "Body: \n\n"
+    footer = "\n\n This bot was created to capture threads missed by LocationBot." \
+             "\n\n [Concerns? Bugs?](https://www.reddit.com/message/compose/?to=laukopier)" \
+             " | [GitHub](https://github.com)"
+    formatted_message = header + body + footer
+
+    # WHEN READY TO DEPLOY, CHANGE testpost BELOW TO thread.
+    testpost.reply(formatted_message)
+
+
 def work_thread(submission, reddit_instance):
     url = url_splitter(submission.url)
 
@@ -125,7 +147,13 @@ def work_thread(submission, reddit_instance):
         if is_comment(target_thread, title, url):
             post_comment_thread(reddit_instance, title, target_thread_obj)
         else:
-            post_thread(reddit_instance, title, target_thread_obj)
+            try:
+                post(reddit_instance, submission, target_thread_obj)
+            except praw.exceptions.APIException:
+                print("Sleeping per reddit request.")
+                time.sleep(15)
+                print("Waking up and trying again.")
+                post(reddit_instance, submission, target_thread_obj)
 
 
 def main(reddit_instance):
