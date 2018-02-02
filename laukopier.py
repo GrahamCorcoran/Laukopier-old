@@ -127,7 +127,7 @@ def post(reddit, thread, target_thread):
     header = "Title: " + title + "\n\n" + "Body: \n\n"
     footer = "\n\n This bot was created to capture threads missed by LocationBot." \
              "\n\n [Concerns? Bugs?](https://www.reddit.com/message/compose/?to=laukopier)" \
-             " | [GitHub](https://github.com)"
+             " | [GitHub](https://github.com/Grambles/Laukopier)"
     formatted_message = header + body + footer
 
     # WHEN READY TO DEPLOY, CHANGE testpost BELOW TO thread.
