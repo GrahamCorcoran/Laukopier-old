@@ -9,6 +9,9 @@ ignored_subreddits = ["legaladvice",
 
 
 class load(object):
+    """
+    Reduces overhead in manipulating json file by handling the opening and dumping of data.
+    """
     def __init__(self, filename):
         self.filename = filename
 
@@ -56,14 +59,10 @@ def is_comment(thread, title, url):
 
 
 def post_comment_thread(reddit_instance, title, submission_obj):
-    print("Comment thread!")
-
-
-def post_thread(reddit_instance, title, submission_obj):
-    body = submission_obj.selftext
-    print("Title: " + title)
-    print("Body: " + body)
-    reddit_instance.submission("7usa17").reply("Title: " + title + "\n \n" + "Body: \n \n > " + body)
+    """
+    Currently no function - possible future integration to handle context and comment threads.
+    """
+    pass
 
 
 def add_thread(thread):
@@ -78,11 +77,8 @@ def add_thread(thread):
 def url_splitter(url):
     """
     :param url: Reddit URL
-    :return: Subreddit as string
-             Target post as string
-             Comment_thread as a boolean: True if comment thread
+    :return: List of URL components, excluding underscores, empty elements, and queries.
     """
-    print(url)
     if "reddit" not in url:
         raise URLError("URL passed into function not from reddit.")
 
@@ -102,36 +98,39 @@ def url_splitter(url):
     return url_components
 
 
-def clear_json():
-    with load(config.filename) as jsondata:
-        print("Are you sure you want to clear all previously worked threads?")
-        print("WARNING: THIS COULD POST TWICE ON THE SAME COMMENT, WHICH BREAKS REDDIT TOS")
-        if input("Please type 'I understand.': ") == "I understand.":
-            jsondata["ThreadID"] = []
-            print("Threads reset.")
-        else:
-            print("Threads not reset.")
-
-
 def post(reddit, thread, target_thread):
+    """
+    :param reddit: Reddit instance
+    :param thread: /r/bestoflegaladvice thread object
+    :param target_thread: thread object of whichever subreddit is being quoted.
+    :action: Submits reply to thread.
+    """
     testpost = reddit.submission("7usa17")
 
     title = target_thread.title
     body = target_thread.selftext
+
     body = body.split("\n\n")
     newbody = []
 
-    for element in body:
-        newbody.append("\n \n> " + element)
-    body = "".join(newbody)
-    header = "Title: " + title + "\n\n" + "Body: \n\n"
-    footer = "\n\n This bot was created to capture threads missed by LocationBot." \
-             "\n\n [Concerns? Bugs?](https://www.reddit.com/message/compose/?to=laukopier)" \
-             " | [GitHub](https://github.com/Grambles/Laukopier)"
-    formatted_message = header + body + footer
+    # If body reduces spam by aborting when there is no selftext, for example when an image is posted.
+    # Could possibly be handled instead by deliberately avoiding image posts, but this works for now.
+    if body:
 
-    # WHEN READY TO DEPLOY, CHANGE testpost BELOW TO thread.
-    testpost.reply(formatted_message)
+        # Adding quotes to each paragraph to match reddit formatting for quoting an entire post.
+        for element in body:
+            newbody.append("\n \n> " + element)
+        body = "".join(newbody)
+        header = "Title: " + title + "\n\n" + "Body: \n\n"
+        footer = "\n\n This bot was created to capture threads missed by LocationBot." \
+                 "\n\n [Concerns? Bugs?](https://www.reddit.com/message/compose/?to=laukopier)" \
+                 " | [GitHub](https://github.com/Grambles/Laukopier)"
+
+        # Compiles message for posting.
+        formatted_message = header + body + footer
+
+        # Submits post.
+        thread.reply(formatted_message)
 
 
 def work_thread(submission, reddit_instance):
@@ -144,12 +143,20 @@ def work_thread(submission, reddit_instance):
         target_thread_obj = reddit_instance.submission(target_thread)
         title = target_thread_obj.title
 
+        # This handles if a linked thread is a context or comment thread.
         if is_comment(target_thread, title, url):
+            # Currently no post_comment_thread function is created, this instead passes.
             post_comment_thread(reddit_instance, title, target_thread_obj)
         else:
             try:
+                # Replies to main thrad.
                 post(reddit_instance, submission, target_thread_obj)
             except praw.exceptions.APIException:
+                """
+                This is currently handled poorly - it does not use a reasonable amount of time,
+                and additionally it may crash if the bot were rate-limited twice in a row.
+                This should be a high priority to resolve.
+                """
                 print("Sleeping per reddit request.")
                 time.sleep(15)
                 print("Waking up and trying again.")
@@ -169,6 +176,10 @@ def main(reddit_instance):
                 try:
                     work_thread(submission, reddit_instance)
                 except URLError:
+                    """
+                    Custom error URLError is caused when a link is posted from outside
+                    of reddit, as it can not be parsed by PRAW.
+                    """
                     pass
 
 
