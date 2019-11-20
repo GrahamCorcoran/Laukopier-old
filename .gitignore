@@ -1,0 +1,6 @@
+settings.py
+*.log
+*.db
+*.env
+.idea/
+__pycache__/
